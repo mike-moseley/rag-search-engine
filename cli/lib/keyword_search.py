@@ -11,12 +11,12 @@ DOCMAP_PICKLE_PATH = os.path.join(PROJECT_ROOT, "cache", "docmap.pkl")
 TERM_FREQUENCIES_PICKLE_PATH = os.path.join(PROJECT_ROOT, "cache", "term_frequencies.pkl")
 
 class InvertedIndex:
-    def __init__(self):
-        self.index = {}
-        self.docmap = {}
-        self.term_frequencies = {}
+    def __init__(self) -> None:
+        self.index: dict[str, set[int]] = {}
+        self.docmap: dict[int, dict] = {}
+        self.term_frequencies: dict[int, Counter] = {}
 
-    def __add_documents(self, doc_id, text):
+    def __add_documents(self, doc_id: int, text: str) -> None:
         tokens = tokenize_text(text)
         if doc_id not in self.term_frequencies:
             self.term_frequencies[doc_id] = Counter()
@@ -29,34 +29,34 @@ class InvertedIndex:
         for token in tokens:
             self.term_frequencies[doc_id][token] += 1
 
-    def get_documents(self, term):
-        term = tokenize_text(term)
-        if len(term) != 1:
-            raise ValueError(f"Expected 1 result, got {len(term)}")
-        docs = self.index.get(term[0], set())
+    def get_documents(self, term: str) -> list[int]:
+        term_tokens = tokenize_text(term)
+        if len(term_tokens) != 1:
+            raise ValueError(f"Expected 1 result, got {len(term_tokens)}")
+        docs = self.index.get(term_tokens[0], set())
         return sorted(list(docs))
 
-    def get_tf(self, doc_id, term):
-        term = tokenize_text(term)
-        if len(term) != 1:
-            raise ValueError(f"Expected 1 result, got {len(term)}")
-        return self.term_frequencies[doc_id][term[0]]
+    def get_tf(self, doc_id: int, term: str) -> int:
+        term_tokens = tokenize_text(term)
+        if len(term_tokens) != 1:
+            raise ValueError(f"Expected 1 result, got {len(term_tokens)}")
+        return self.term_frequencies[doc_id][term_tokens[0]]
 
-    def get_idf(self, term):
-        term = tokenize_text(term)
-        if len(term) != 1:
-            raise ValueError(f"Expected 1 result, got {len(term)}")
+    def get_idf(self, term: str) -> float:
+        term_tokens = tokenize_text(term)
+        if len(term_tokens) != 1:
+            raise ValueError(f"Expected 1 result, got {len(term_tokens)}")
         total_doc_count = len(self.docmap)
-        term_match_doc_count = len(self.index.get(term[0], set()))
+        term_match_doc_count = len(self.index.get(term_tokens[0], set()))
         return math.log((total_doc_count + 1) / (term_match_doc_count + 1))
 
-    def build(self):
+    def build(self) -> None:
         movies = load_movies()
         for movie in movies:
             self.docmap[movie["id"]] = movie
             self.__add_documents(movie["id"],f"{movie['title']} {movie['description']}")
 
-    def save(self):
+    def save(self) -> None:
         os.makedirs("cache", exist_ok = True)
         with open(INDEX_PICKLE_PATH, "wb") as idx_f:
             pickle.dump(self.index, idx_f)
@@ -65,7 +65,7 @@ class InvertedIndex:
         with open(TERM_FREQUENCIES_PICKLE_PATH, "wb") as term_freq_f:
             pickle.dump(self.term_frequencies, term_freq_f)
 
-    def load(self):
+    def load(self) -> None:
         try:
             with open(INDEX_PICKLE_PATH, "rb") as idx_f:
                 self.index = pickle.load(idx_f)
@@ -77,15 +77,15 @@ class InvertedIndex:
             return
 
 
-def search_command(query, limit = DEFAULT_SEARCH_LIMIT):
+def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict] | None:
     idx = InvertedIndex()
     try:
         idx.load()
     except FileNotFoundError:
         print("Index not found, try 'build' command first")
         return
-    seen = set()
-    results = []
+    seen: set[int] = set()
+    results: list[dict] = []
 
     for token in tokenize_text(query):
         for doc_id in idx.get_documents(token):
@@ -95,33 +95,33 @@ def search_command(query, limit = DEFAULT_SEARCH_LIMIT):
             if len(results) >= limit:
                 return results
 
-def build_command():
+def build_command() -> None:
     idx = InvertedIndex()
     idx.build()
     idx.save()
 
-def stem(term):
+def stem(term: str) -> str:
     return PorterStemmer().stem(term.lower())
 
-def tf_command(doc_id, term):
+def tf_command(doc_id: int, term: str) -> int:
     idx = InvertedIndex()
     idx.load()
     return idx.get_tf(doc_id, term)
 
-def idf_command(term):
+def idf_command(term: str) -> float:
     idx = InvertedIndex()
     idx.load()
     return idx.get_idf(term)
 
-def tfidf_command(doc_id, term):
+def tfidf_command(doc_id: int, term: str) -> float:
     idx = InvertedIndex()
     idx.load()
     idf = idx.get_idf(term)
-    tf = idx.get_tf(doc_id,term)
+    tf = idx.get_tf(doc_id, term)
     return tf * idf
 
 
-def tokenize_text(text):
+def tokenize_text(text: str) -> list[str]:
     stripped = text.lower().translate(text.maketrans("", "", string.punctuation))
     tokens = [s for s in stripped.split() if s != ""]
     stop_words = load_stopwords()
