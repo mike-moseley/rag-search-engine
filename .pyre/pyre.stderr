@@ -1,0 +1,27 @@
+2026-04-04 21:30:23,208 [PID 190325] ERROR Uncaught error in persistent.run
+Traceback (most recent call last):
+  File "/home/mike/.local/share/nvim/mason/packages/pyre/venv/lib/python3.14/site-packages/pyre_check/client/commands/persistent.py", line 299, in run
+    return asyncio.get_event_loop().run_until_complete(
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/asyncio/events.py", line 715, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+                       % threading.current_thread().name)
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2026-04-04 21:30:41,049 [PID 190399] ERROR Uncaught error in persistent.run
+Traceback (most recent call last):
+  File "/home/mike/.local/share/nvim/mason/packages/pyre/venv/lib/python3.14/site-packages/pyre_check/client/commands/persistent.py", line 299, in run
+    return asyncio.get_event_loop().run_until_complete(
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/asyncio/events.py", line 715, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+                       % threading.current_thread().name)
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2026-04-04 21:30:58,511 [PID 190533] ERROR Uncaught error in persistent.run
+Traceback (most recent call last):
+  File "/home/mike/.local/share/nvim/mason/packages/pyre/venv/lib/python3.14/site-packages/pyre_check/client/commands/persistent.py", line 299, in run
+    return asyncio.get_event_loop().run_until_complete(
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/asyncio/events.py", line 715, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+                       % threading.current_thread().name)
+RuntimeError: There is no current event loop in thread 'MainThread'.
