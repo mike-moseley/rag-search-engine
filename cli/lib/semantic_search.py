@@ -1,12 +1,14 @@
+import json
+import re
 import os
 from sentence_transformers import SentenceTransformer
-from lib.consts import EMBEDDING_PATH
+from lib.consts import EMBEDDING_PATH, CHUNK_EMBEDDING_PATH, CHUNK_METADATA_PATH, SCORE_PRECISION
 from lib.search_utils import load_movies
 import numpy as np
 
 class SemanticSearch:
-    def __init__(self):
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+    def __init__(self, model_name: str = 'all-MiniLM-L6-v2'):
+        self.model = SentenceTransformer(model_name)
         self.embeddings = None
         self.documents = None
         self.document_map = {}
@@ -66,6 +68,81 @@ class SemanticSearch:
 
         return embedded_dicts
 
+class ChunkedSemanticSearch(SemanticSearch):
+    def __init__(self, model_name = "all-MiniLM-L6-v2") -> None:
+        super().__init__(model_name)
+        self.chunk_embeddings = None
+        self.chunk_metadata = None
+    def build_chunk_embeddings(self, documents: list[dict[str,str]]):
+        self.populate_doc_doc_map(documents)
+
+        chunk_list: list[str] = []
+        metadata_list: list[dict] = []
+
+        for i,doc in enumerate(documents):
+            if doc["description"].strip() == "":
+                continue
+            chunks = chunk_command(doc["description"], 4, 1, True)
+            chunk_list.extend(chunks)
+            for j, chunk in enumerate(chunks):
+                metadata_list.append({"movie_idx": i, "chunk_idx": j, "total_chunks": len(chunks)})
+
+        chunk_embeddings = self.model.encode(chunk_list, show_progress_bar=True)
+        self.chunk_embeddings = chunk_embeddings
+        self.chunk_metadata = metadata_list
+        np.save(CHUNK_EMBEDDING_PATH, chunk_embeddings)
+        with open(CHUNK_METADATA_PATH, "w") as f:
+            json.dump({"chunks": metadata_list, "total_chunks": len(chunk_list)}, f, indent=2)
+        return chunk_embeddings
+
+    def load_or_create_chunk_embeddings(self, documents: list[dict[str,str]]):
+        self.populate_doc_doc_map(documents)
+        if os.path.exists(CHUNK_EMBEDDING_PATH) and os.path.exists(CHUNK_METADATA_PATH):
+            chunk_embeddings = np.load(CHUNK_EMBEDDING_PATH)
+            self.chunk_embeddings = chunk_embeddings
+            with open(CHUNK_METADATA_PATH) as f:
+                chunk_metadata = json.load(f)
+                self.chunk_metadata = chunk_metadata["chunks"]
+            return self.chunk_embeddings
+        return self.build_chunk_embeddings(documents)
+
+    def search_chunks(self, query: str, limit: int = 10):
+        embedding = self.generate_embedding(query)
+        chunk_scores = []
+        if self.chunk_embeddings is None:
+            raise ValueError("No chunk embeddings loaded")
+        if self.chunk_metadata is None:
+            raise ValueError("No chunk metadata loaded")
+        for i, chunk in enumerate(self.chunk_embeddings):
+            score = cosine_similarity(embedding, chunk)
+            chunk_scores.append({
+                "chunk_idx": i,
+                "movie_idx": self.chunk_metadata[i]["movie_idx"],
+                "score": score
+            })
+
+        movie_scores = {}
+        for chunk in chunk_scores:
+            movie_idx = chunk["movie_idx"]
+            if movie_idx not in movie_scores or chunk["score"] > movie_scores[movie_idx]:
+                movie_scores[movie_idx] = chunk["score"]
+        sorted_scores = sorted(movie_scores.items(), key=lambda x: x[1], reverse=True)
+        if sorted_scores is None:
+            raise ValueError("No scores after sorting")
+        final_list = []
+        for score in sorted_scores:
+            if self.documents is None:
+                raise ValueError("Documents is empty")
+            movie = self.documents[score[0]]
+            final_list.append({
+                "id": movie["id"],
+                "title": movie["title"],
+                "document": movie["description"][:100],
+                "score": round(score[1], SCORE_PRECISION),
+                "metadata": movie.get("metadata") or {}
+            })
+        return final_list[:limit]
+
 
 def verify_model():
     semantic_search = SemanticSearch()
@@ -118,15 +195,46 @@ def search_command(query:str, limit:int):
     for i,r in enumerate(results, 1):
         print(f'{i}. {r["title"]} ({r["score"]})\n\t{r["description"][:80]}...')
 
-def chunk_command(query: str, size: int, overlap: int = 0):
-    split = query.split()
+def chunk_command(query: str, size: int, overlap: int, semantic: bool):
+    query = query.strip()
+    if query == "":
+        return []
+    if semantic == True:
+        split = re.split(r"(?<=[.!?])\s+", query)
+    else:
+        split = query.split()
+    if len(split) == 1 and not split[0].endswith(("!","?",".")):
+        return [query]
     chunks: list[str] = []
     step = size - overlap
     for i in range(0, len(split), step):
         chunk = " ".join(split[i:i+size])
+        chunk = chunk.strip()
+        if chunk == "":
+            continue
         if len(split[i:i+size]) > overlap:
             chunks.append(chunk)
+    return chunks
 
-    print(f"Chunking {len(query)} characters:")
+def chunk_command_text(query: str, chunks: list[str], semantic: bool):
+    if semantic == True:
+        print(f"Semantically chunking {len(query)} characters:")
+    else:
+        print(f"Chunking {len(query)} characters:")
     for i,chunk in enumerate(chunks, 1):
         print(f"{i}. {chunk}")
+
+def embed_chunks_command():
+    chunked_semantic_search = ChunkedSemanticSearch()
+    movies = load_movies()
+    embeddings = chunked_semantic_search.load_or_create_chunk_embeddings(movies)
+    print(f"Generated {len(embeddings)} chunked embeddings")
+
+def search_chunked_command(query: str, limit: int):
+    chunked_semantic_search = ChunkedSemanticSearch()
+    movies = load_movies()
+    embeddings = chunked_semantic_search.load_or_create_chunk_embeddings(movies)
+    search = chunked_semantic_search.search_chunks(query, limit)
+    for i,s in enumerate(search,1):
+        print(f"\n{i}. {s["title"]} (score: {s["score"]:.4f})")
+        print(f"    {s["document"]}...")
