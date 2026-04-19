@@ -77,7 +77,7 @@ class InvertedIndex:
         tf = self.get_bm25_tf(doc_id, term)
         return idf * tf
 
-    def bm25_search(self, query, limit) -> list[tuple[int, str, float]]:
+    def bm25_search(self, query, limit) -> list[dict]:
         tokens = tokenize_text(query)
         scores: dict[int, float] = {}
         for doc_id in self.docmap:
@@ -88,7 +88,15 @@ class InvertedIndex:
         # .items method returns list of tuples, dict() turns tuple (x, y) into dict {x: y}
         # Our item below is a tuple (doc_id, score), so we sort by score `item[1]`
         sorted_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)[:limit]
-        return [(doc_id, self.docmap[doc_id]["title"], score) for doc_id, score in sorted_scores]
+        return [
+          {
+              "id": doc_id,
+              "title": self.docmap[doc_id]["title"],
+              "document": self.docmap[doc_id]["description"][:100],
+              "score": score
+          }
+          for doc_id, score in sorted_scores
+      ]
 
     def build(self) -> None:
         movies = load_movies()
@@ -176,7 +184,7 @@ def bm25_tf_command(doc_id: int, term: str) -> float:
     tf = idx.get_bm25_tf(doc_id, term)
     return tf
 
-def bm25_search_command(term: str, limit: int) -> list[tuple[int, str, float]]:
+def bm25_search_command(term: str, limit: int) -> list[dict]:
     idx = InvertedIndex()
     idx.load()
     bm25 = idx.bm25_search(term, limit)

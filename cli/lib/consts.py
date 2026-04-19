@@ -4,6 +4,7 @@ DEFAULT_SEARCH_LIMIT = 5
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 DATA_PATH = os.path.join(PROJECT_ROOT, "data", "movies.json")
+GOLDEN_DATA_PATH = os.path.join(PROJECT_ROOT, "data", "golden_dataset.json")
 STOPWORDS_PATH = os.path.join(PROJECT_ROOT, "data", "stopwords.txt")
 INDEX_PICKLE_PATH = os.path.join(PROJECT_ROOT, "cache", "index.pkl")
 DOCMAP_PICKLE_PATH = os.path.join(PROJECT_ROOT, "cache", "docmap.pkl")
