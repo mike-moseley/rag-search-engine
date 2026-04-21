@@ -60,7 +60,7 @@ class HybridSearch:
                 "score": score,
                 "bm25_rank": bm25_rank,
                 "sem_rank": sem_rank,
-                "document": self.idx.docmap[doc_id]["description"][:100]
+                "document": self.idx.docmap[doc_id]["description"]
             })
         sorted_scores = sorted(scores_list, key=lambda x: x["score"], reverse=True)[:limit]
         logger.info(f"Sorted Scores: {sorted_scores}")

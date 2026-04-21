@@ -141,7 +141,7 @@ def RAG_CITATION(query: str, documents: list):
 
     Answer:"""
 
-def RAG_QUESTION_ANSWER(query: str, context: list):
+def RAG_QUESTION(query: str, context: list):
     return f"""Answer the following question based on the provided documents.
 
 Question: {query}
