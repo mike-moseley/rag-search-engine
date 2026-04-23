@@ -161,3 +161,9 @@ Guidance on types of questions:
 - Opinion-based questions: Acknowledge subjectivity and provide a balanced view
 
 Answer:"""
+
+def RAG_IMAGE():
+    return """Given the included image and text query, rewrite the text query to improve search results from a movie database. Make sure to:
+- Synthesize visual and textual information
+- Focus on movie-specific details (actors, scenes, style, etc.)
+- Return only the rewritten query, without any additional commentary"""

@@ -2,7 +2,7 @@ import argparse
 import json
 import logging
 from lib.consts import GOLDEN_DATA_PATH
-from lib.hybrid_search import rrf_search_command
+from lib.hybrid_search import rrf_search_get
 from lib.search_utils import load_movies
 
 def main():
@@ -22,7 +22,7 @@ def main():
 
     print(f"k = {limit}")
     for test in data:
-        scores = rrf_search_command(test["query"], 60, limit, None,rerank="cross_encode")
+        scores = rrf_search_get(test["query"], 60, limit, None, "cross_encoder", None)
 
         retrieved = []
         relevant_num = 0
